@@ -172,8 +172,18 @@ jobs:
       - name: Install ALSA dev libs (voice-wake)
         if: runner.os == 'Linux' && inputs.include_voice_wake == true
         run: |
+          sudo dpkg --add-architecture arm64
           sudo apt-get update -qq
           sudo apt-get install -y libasound2-dev
+
+      - name: Configure pkg-config for cross-compilation (voice-wake)
+        if: matrix.target == 'aarch64-unknown-linux-gnu' && inputs.include_voice_wake == true
+        shell: bash
+        run: |
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_SYSROOT_DIR=/" >> "$GITHUB_ENV"
+          
       - name: Build release
         shell: bash
         run: |
