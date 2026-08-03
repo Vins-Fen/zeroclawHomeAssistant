@@ -11,7 +11,13 @@ on:
         options:
           - dist
           - dist-broad
-         include_voice_wake:
+        include_voice_wake:
+        description: Include voice-wake feature (requires ALSA on Linux)
+        required: false
+        type: boolean
+        default: false
+
+include_voice_wake:
         description: Include voice-wake feature (requires ALSA on Linux)
         required: false
         type: boolean
@@ -167,11 +173,20 @@ jobs:
               echo "CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUSTFLAGS=-C target-feature=-neon"
             fi
           } >> "$GITHUB_ENV"
-
+        
+      - name: Install ALSA dev libs (voice-wake)
+        if: runner.os == 'Linux' && inputs.include_voice_wake == true
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libasound2-dev
       - name: Build release
         shell: bash
         run: |
           FEATURES="$(cargo run --quiet -p xtask --bin generate -- features --selection "${{ inputs.distribution }}" --target "${{ matrix.target }}")"
+          if [ "${{ inputs.include_voice_wake }}" = "true" ]; then
+          FEATURES="${FEATURES},voice-wake"
+          fi
+          echo "Resolved features: $FEATURES"
           echo "Resolved features: $FEATURES"
           $BUILD_CMD --release --locked --no-default-features --features "${FEATURES}" --target ${{ matrix.target }}
           binary="target/${{ matrix.target }}/release/${{ runner.os == 'Windows' && 'zeroclaw.exe' || 'zeroclaw' }}"
@@ -182,6 +197,7 @@ jobs:
             echo "- Binary bytes: $bytes"
             echo "- Resolved features: \`$FEATURES\`"
           } >> "$GITHUB_STEP_SUMMARY"
+        
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: zeroclaw-manual-${{ inputs.distribution }}-${{ matrix.target }}
