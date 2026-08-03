@@ -11,6 +11,11 @@ on:
         options:
           - dist
           - dist-broad
+         include_voice_wake:
+        description: Include voice-wake feature (requires ALSA on Linux)
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
