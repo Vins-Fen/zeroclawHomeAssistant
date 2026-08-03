@@ -173,8 +173,11 @@ jobs:
         if: runner.os == 'Linux' && inputs.include_voice_wake == true
         run: |
           sudo dpkg --add-architecture arm64
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main universe" | sudo tee /etc/apt/sources.list.d/arm64-ports.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main universe" | sudo tee -a /etc/apt/sources.list.d/arm64-ports.list
           sudo apt-get update -qq
-          sudo apt-get install -y libasound2-dev
+          sudo apt-get install -y libasound2-dev:arm64
+
 
       - name: Configure pkg-config for cross-compilation (voice-wake)
         if: matrix.target == 'aarch64-unknown-linux-gnu' && inputs.include_voice_wake == true
