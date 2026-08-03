@@ -73,7 +73,7 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             use_cross: true
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
             cross_compiler: gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
             linker_env: CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER
@@ -169,27 +169,34 @@ jobs:
             fi
           } >> "$GITHUB_ENV"
         
-      - name: Install ALSA dev libs (voice-wake)
-        if: runner.os == 'Linux' && inputs.include_voice_wake == true
+      - name: Install ALSA dev libs for aarch64 GNU (voice-wake)
+        if: matrix.target == 'aarch64-unknown-linux-gnu' && inputs.include_voice_wake == true
+        shell: bash
         run: |
           sudo dpkg --add-architecture arm64
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main universe" | sudo tee /etc/apt/sources.list.d/arm64-ports.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main universe" | sudo tee -a /etc/apt/sources.list.d/arm64-ports.list
+
+          sudo tee /etc/apt/sources.list.d/arm64-ports.list > /dev/null <<'EOF'
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main universe
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main universe
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main universe
+          EOF
+
           sudo apt-get update -qq \
             -o Dir::Etc::sourcelist="sources.list.d/arm64-ports.list" \
             -o Dir::Etc::sourceparts="-" \
             -o APT::Get::List-Cleanup="0"
-          sudo apt-get install -y libasound2-dev:arm64
 
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config \
+            libasound2-dev:arm64
 
-
-      - name: Configure pkg-config for cross-compilation (voice-wake)
+      - name: Configure pkg-config for aarch64 (voice-wake)
         if: matrix.target == 'aarch64-unknown-linux-gnu' && inputs.include_voice_wake == true
         shell: bash
         run: |
           echo "PKG_CONFIG_ALLOW_CROSS=1" >> "$GITHUB_ENV"
-          echo "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig" >> "$GITHUB_ENV"
           echo "PKG_CONFIG_SYSROOT_DIR=/" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> "$GITHUB_ENV"
           
       - name: Build release
         shell: bash
