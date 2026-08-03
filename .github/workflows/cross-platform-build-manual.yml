@@ -175,8 +175,12 @@ jobs:
           sudo dpkg --add-architecture arm64
           echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main universe" | sudo tee /etc/apt/sources.list.d/arm64-ports.list
           echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main universe" | sudo tee -a /etc/apt/sources.list.d/arm64-ports.list
-          sudo apt-get update -qq
+          sudo apt-get update -qq \
+            -o Dir::Etc::sourcelist="sources.list.d/arm64-ports.list" \
+            -o Dir::Etc::sourceparts="-" \
+            -o APT::Get::List-Cleanup="0"
           sudo apt-get install -y libasound2-dev:arm64
+
 
 
       - name: Configure pkg-config for cross-compilation (voice-wake)
