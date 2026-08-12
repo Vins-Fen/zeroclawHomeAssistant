@@ -234,9 +234,9 @@ impl Channel for VoiceWakeChannel {
                         {
                             Ok(text) => {
                                 let lower = text.to_lowercase();
-                                if let Some(pos)= lower.find(&wake_word) {
-                                    let rest= &lower[pos + wake_word.len()..];
-                                    let command= rest.trim();
+                                if let Some(pos) = lower.find(&wake_word) {
+                                    let rest = &lower[pos + wake_word.len()..];
+                                    let command = rest.trim();
 
                                     ::zeroclaw_log::record!(
                                         INFO,
@@ -256,8 +256,7 @@ impl Channel for VoiceWakeChannel {
                                         capture_start = Instant::now();
                                     } else {
                                         //case 2: wake word + command
-                                        msg_counter +=1;
-
+                                        msg_counter += 1;
 
                                         let ts = SystemTime::now()
                                             .duration_since(UNIX_EPOCH)
@@ -282,21 +281,20 @@ impl Channel for VoiceWakeChannel {
 
                                         if let Err(e) = tx.send(msg).await {
                                             ::zeroclaw_log::record!(
-                                            WARN,
-                                            ::zeroclaw_log::Event::new(
-                                                module_path!(),
-                                                ::zeroclaw_log::Action::Note
-                                            )
-                                            .with_outcome(::zeroclaw_log::EventOutcome::Unknown)
-                                            .with_attrs(
-                                                ::serde_json::json!({"error": format!("{}", e)})
-                                            ),
-                                            "VoiceWake: failed to dispatch message"
-                                        );
+                                                WARN,
+                                                ::zeroclaw_log::Event::new(
+                                                    module_path!(),
+                                                    ::zeroclaw_log::Action::Note
+                                                )
+                                                .with_outcome(::zeroclaw_log::EventOutcome::Unknown)
+                                                .with_attrs(
+                                                    ::serde_json::json!({"error": format!("{}", e)})
+                                                ),
+                                                "VoiceWake: failed to dispatch message"
+                                            );
                                         }
-                                        state= WakeState::Listening;
+                                        state = WakeState::Listening;
                                         capture_buf.clear();
-
                                     }
                                 } else {
                                     ::zeroclaw_log::record!(
