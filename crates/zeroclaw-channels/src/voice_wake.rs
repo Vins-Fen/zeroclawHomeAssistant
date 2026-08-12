@@ -234,7 +234,10 @@ impl Channel for VoiceWakeChannel {
                         {
                             Ok(text) => {
                                 let lower = text.to_lowercase();
-                                if lower.contains(&wake_word) {
+                                if let Some(pos)= lower.find(&wake_word) {
+                                    let rest= &lower[pos + wake_word.len()..];
+                                    let command= rest.trim();
+
                                     ::zeroclaw_log::record!(
                                         INFO,
                                         ::zeroclaw_log::Event::new(
@@ -244,10 +247,57 @@ impl Channel for VoiceWakeChannel {
                                         .with_attrs(::serde_json::json!({"text": text})),
                                         "VoiceWake: wake word detected — capturing utterance"
                                     );
-                                    state = WakeState::Capturing;
-                                    capture_buf.clear();
-                                    last_voice_at = Instant::now();
-                                    capture_start = Instant::now();
+                                    if command.is_empty() {
+                                        //case 1: only wake word
+
+                                        state = WakeState::Capturing;
+                                        capture_buf.clear();
+                                        last_voice_at = Instant::now();
+                                        capture_start = Instant::now();
+                                    } else {
+                                        //case 2: wake word + command
+                                        msg_counter +=1;
+
+
+                                        let ts = SystemTime::now()
+                                            .duration_since(UNIX_EPOCH)
+                                            .unwrap_or_default()
+                                            .as_secs();
+
+                                        let msg = ChannelMessage {
+                                            id: format!("voice_wake_{msg_counter}"),
+                                            sender: "voice_user".into(),
+                                            reply_target: "voice_user".into(),
+                                            content: command.to_string(),
+                                            channel: "voice_wake".into(),
+                                            channel_alias: Some(self_alias.clone()),
+                                            timestamp: ts,
+                                            thread_ts: None,
+                                            interruption_scope_id: None,
+                                            attachments: vec![],
+                                            subject: None,
+
+                                            ..Default::default()
+                                        };
+
+                                        if let Err(e) = tx.send(msg).await {
+                                            ::zeroclaw_log::record!(
+                                            WARN,
+                                            ::zeroclaw_log::Event::new(
+                                                module_path!(),
+                                                ::zeroclaw_log::Action::Note
+                                            )
+                                            .with_outcome(::zeroclaw_log::EventOutcome::Unknown)
+                                            .with_attrs(
+                                                ::serde_json::json!({"error": format!("{}", e)})
+                                            ),
+                                            "VoiceWake: failed to dispatch message"
+                                        );
+                                        }
+                                        state= WakeState::Listening;
+                                        capture_buf.clear();
+
+                                    }
                                 } else {
                                     ::zeroclaw_log::record!(
                                         DEBUG,
